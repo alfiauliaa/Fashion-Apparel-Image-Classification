@@ -1,6 +1,6 @@
 """
 Fashion Apparel Image Classification - Streamlit Web App
-FIXED V3 - With Metadata and Training History Display
+Dark Mode Design with Sample Dataset Images
 """
 
 import streamlit as st
@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import os
 import warnings
+import random
 warnings.filterwarnings('ignore')
 
 # ============================================================
@@ -26,53 +27,357 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+icons = {'dress':'👗', 'pants':'👖', 'shirt':'👕', 'shoes':'👞', 'shorts':'🩳'}
 # Disable GPU
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 tf.config.set_visible_devices([], 'GPU')
 
-# Custom CSS
+# Dark Mode Custom CSS
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 3rem;
-        font-weight: bold;
-        text-align: center;
-        color: #1f77b4;
-        margin-bottom: 0.5rem;
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+    
+    /* Global Dark Theme */
+    * {
+        font-family: 'Inter', sans-serif;
     }
+    
+    /* Main Background */
+    .stApp {
+        background: #0f1419;
+    }
+    
+    .main {
+        background: #0f1419;
+    }
+    
+    .block-container {
+        background: #1a1f2e;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        border: 1px solid #2d3748;
+    }
+    
+    /* Text Colors */
+    .stMarkdown, p, span, div, label {
+        color: #e2e8f0 !important;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+        color: #f7fafc !important;
+    }
+    
+    /* Header Styles */
+    .main-header {
+        font-size: 3.5rem;
+        font-weight: 800;
+        text-align: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+        animation: fadeInDown 0.8s ease;
+        letter-spacing: -1px;
+    }
+    
     .sub-header {
         font-size: 1.2rem;
         text-align: center;
-        color: #666;
+        color: #a0aec0;
         margin-bottom: 2rem;
+        font-weight: 400;
+        animation: fadeInUp 0.8s ease;
     }
+    
+    /* Prediction Box */
     .prediction-box {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 2rem;
-        border-radius: 1rem;
+        padding: 2.5rem;
+        border-radius: 20px;
         text-align: center;
         margin: 1rem 0;
+        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+        animation: scaleIn 0.5s ease;
+        border: 1px solid rgba(255,255,255,0.1);
     }
+    
+    .prediction-box * {
+        color: white !important;
+    }
+    
+    /* Metric Card - Dark */
     .metric-card {
-        background: #f0f2f6;
-        padding: 1.5rem;
-        border-radius: 0.5rem;
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        padding: 2rem;
+        border-radius: 15px;
         text-align: center;
-        border-left: 4px solid #1f77b4;
+        border: 1px solid #4a5568;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+        animation: fadeIn 0.6s ease;
     }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
+        border-color: #667eea;
+    }
+    
     .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #1f77b4;
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
+    
     .metric-label {
         font-size: 0.9rem;
-        color: #666;
+        color: #a0aec0 !important;
         margin-top: 0.5rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    /* Class Card - Dark */
+    .class-card {
+        text-align: center;
+        padding: 2rem;
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        border-radius: 15px;
+        border: 2px solid #4a5568;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+        animation: fadeIn 0.8s ease;
+    }
+    
+    .class-card:hover {
+        transform: translateY(-8px) scale(1.05);
+        box-shadow: 0 20px 50px rgba(102, 126, 234, 0.4);
+        border-color: #667eea;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .class-icon {
+        font-size: 3.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .class-name {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #e2e8f0;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    
+    /* Info Box - Dark */
+    .info-box {
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        color: #e2e8f0;
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin: 1rem 0;
+        border: 1px solid #4a5568;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    
+    .info-box h3, .info-box h4 {
+        color: #667eea !important;
+        margin-bottom: 1rem;
+    }
+    
+    /* Section Header */
+    .section-header {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #667eea !important;
+        margin: 2rem 0 1rem 0;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #667eea;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    /* Sidebar Dark */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #1a1f2e 0%, #0f1419 100%);
+        border-right: 1px solid #2d3748;
+    }
+    
+    [data-testid="stSidebar"] .stMarkdown h1,
+    [data-testid="stSidebar"] .stMarkdown h2,
+    [data-testid="stSidebar"] .stMarkdown h3,
+    [data-testid="stSidebar"] .stMarkdown h4 {
+        color: #667eea !important;
+    }
+    
+    [data-testid="stSidebar"] label {
+        color: #e2e8f0 !important;
+        font-weight: 600;
+    }
+    
+    [data-testid="stSidebar"] p {
+        color: #a0aec0 !important;
+    }
+    
+    /* Buttons Dark */
+    .stButton>button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+    }
+    
+    /* Divider */
+    hr {
+        margin: 2rem 0;
+        border: none;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #4a5568, transparent);
+    }
+    
+    /* Sample Image Container */
+    .sample-image-container {
+        background: #2d3748;
+        padding: 1rem;
+        border-radius: 15px;
+        border: 2px solid #4a5568;
+        transition: all 0.3s ease;
+        margin: 0.5rem;
+    }
+    
+    .sample-image-container:hover {
+        border-color: #667eea;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        transform: translateY(-5px);
+    }
+    
+    .sample-image-label {
+        text-align: center;
+        color: #e2e8f0;
+        font-weight: 600;
+        margin-top: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.9rem;
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes scaleIn {
+        from {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    /* Dataframe Dark */
+    .dataframe {
+        background: #2d3748 !important;
+        color: #e2e8f0 !important;
+    }
+    
+    /* Input fields dark */
+    .stTextInput>div>div>input,
+    .stSelectbox>div>div>select {
+        background: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #4a5568 !important;
+    }
+    
+    /* File uploader dark */
+    [data-testid="stFileUploadDropzone"] {
+        background: #2d3748 !important;
+        border: 2px dashed #4a5568 !important;
+    }
+    
+    /* Success/Warning/Error boxes */
+    .stSuccess, .stWarning, .stError, .stInfo {
+        background: #2d3748 !important;
+        border-left: 4px solid #667eea !important;
+        color: #e2e8f0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
+
+def load_sample_images(sample_dir='sample_images', num_per_class=3):
+    """Load sample images from the sample_images folder"""
+    sample_images = {}
+    
+    if not os.path.exists(sample_dir):
+        return None
+    
+    # Get all subdirectories (each is a class)
+    for class_name in os.listdir(sample_dir):
+        class_path = os.path.join(sample_dir, class_name)
+        if os.path.isdir(class_path):
+            images = []
+            image_files = [f for f in os.listdir(class_path) 
+                          if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+            
+            # Randomly select images
+            selected = random.sample(image_files, min(num_per_class, len(image_files)))
+            
+            for img_file in selected:
+                img_path = os.path.join(class_path, img_file)
+                try:
+                    img = Image.open(img_path)
+                    images.append(img)
+                except:
+                    continue
+            
+            if images:
+                sample_images[class_name] = images
+    
+    return sample_images if sample_images else None
 
 # ============================================================
 # MODEL BUILDING FUNCTIONS
@@ -458,52 +763,80 @@ def predict_image(image, model, model_name, class_names):
 # ============================================================
 
 def plot_confidence_bars(probabilities):
-    """Plot confidence bars"""
-    fig, ax = plt.subplots(figsize=(10, 5))
+    """Plot confidence bars with dark theme"""
+    fig, ax = plt.subplots(figsize=(10, 5), facecolor='#1a1f2e')
+    ax.set_facecolor('#2d3748')
     
     classes = list(probabilities.keys())
     probs = list(probabilities.values())
     
-    colors = ['#2ecc71' if p == max(probs) else '#3498db' for p in probs]
+    colors = []
+    for p in probs:
+        if p == max(probs):
+            colors.append('#667eea')
+        else:
+            colors.append('#4a5568')
     
-    bars = ax.barh(classes, probs, color=colors)
-    ax.set_xlabel('Confidence', fontsize=12, fontweight='bold')
-    ax.set_title('Prediction Confidence', fontsize=14, fontweight='bold')
+    bars = ax.barh(classes, probs, color=colors, edgecolor='none', height=0.6)
+    ax.set_xlabel('Confidence Score', fontsize=12, fontweight='600', color='#e2e8f0')
+    ax.set_title('Prediction Confidence Distribution', fontsize=14, fontweight='700', 
+                 color='#667eea', pad=20)
     ax.set_xlim([0, 1])
-    ax.grid(axis='x', alpha=0.3)
+    ax.grid(axis='x', alpha=0.2, linestyle='--', color='#4a5568')
+    ax.tick_params(colors='#e2e8f0')
+    
+    for spine in ax.spines.values():
+        spine.set_color('#4a5568')
     
     for i, (bar, prob) in enumerate(zip(bars, probs)):
-        ax.text(prob + 0.01, i, f'{prob*100:.1f}%',
-                va='center', fontweight='bold')
+        ax.text(prob + 0.02, i, f'{prob*100:.1f}%',
+                va='center', fontweight='600', fontsize=10, color='#e2e8f0')
     
     plt.tight_layout()
     return fig
 
 def plot_training_history(history, model_name):
-    """Plot training history"""
+    """Plot training history with dark theme"""
     if history is None:
         st.warning(f"⚠️ No training history available for {model_name}")
         return None
     
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5), facecolor='#1a1f2e')
     
-    # Accuracy
-    axes[0].plot(history['accuracy'], label='Train Accuracy', marker='o', linewidth=2)
-    axes[0].plot(history['val_accuracy'], label='Val Accuracy', marker='s', linewidth=2)
-    axes[0].set_title(f'{model_name} - Accuracy', fontsize=14, fontweight='bold')
-    axes[0].set_xlabel('Epoch', fontsize=12)
-    axes[0].set_ylabel('Accuracy', fontsize=12)
-    axes[0].legend()
-    axes[0].grid(True, alpha=0.3)
+    for ax in axes:
+        ax.set_facecolor('#2d3748')
     
-    # Loss
-    axes[1].plot(history['loss'], label='Train Loss', marker='o', linewidth=2)
-    axes[1].plot(history['val_loss'], label='Val Loss', marker='s', linewidth=2)
-    axes[1].set_title(f'{model_name} - Loss', fontsize=14, fontweight='bold')
-    axes[1].set_xlabel('Epoch', fontsize=12)
-    axes[1].set_ylabel('Loss', fontsize=12)
-    axes[1].legend()
-    axes[1].grid(True, alpha=0.3)
+    # Accuracy plot
+    axes[0].plot(history['accuracy'], label='Training', marker='o', linewidth=2.5, 
+                color='#667eea', markersize=6)
+    axes[0].plot(history['val_accuracy'], label='Validation', marker='s', linewidth=2.5,
+                color='#764ba2', markersize=6)
+    axes[0].set_title(f'{model_name} - Accuracy', fontsize=13, fontweight='700', 
+                     color='#e2e8f0', pad=15)
+    axes[0].set_xlabel('Epoch', fontsize=11, fontweight='600', color='#a0aec0')
+    axes[0].set_ylabel('Accuracy', fontsize=11, fontweight='600', color='#a0aec0')
+    axes[0].legend(frameon=True, fancybox=True, shadow=True, fontsize=10, 
+                  facecolor='#2d3748', edgecolor='#4a5568', labelcolor='#e2e8f0')
+    axes[0].grid(True, alpha=0.2, linestyle='--', color='#4a5568')
+    axes[0].tick_params(colors='#a0aec0')
+    for spine in axes[0].spines.values():
+        spine.set_color('#4a5568')
+    
+    # Loss plot
+    axes[1].plot(history['loss'], label='Training', marker='o', linewidth=2.5,
+                color='#667eea', markersize=6)
+    axes[1].plot(history['val_loss'], label='Validation', marker='s', linewidth=2.5,
+                color='#764ba2', markersize=6)
+    axes[1].set_title(f'{model_name} - Loss', fontsize=13, fontweight='700', 
+                     color='#e2e8f0', pad=15)
+    axes[1].set_xlabel('Epoch', fontsize=11, fontweight='600', color='#a0aec0')
+    axes[1].set_ylabel('Loss', fontsize=11, fontweight='600', color='#a0aec0')
+    axes[1].legend(frameon=True, fancybox=True, shadow=True, fontsize=10,
+                  facecolor='#2d3748', edgecolor='#4a5568', labelcolor='#e2e8f0')
+    axes[1].grid(True, alpha=0.2, linestyle='--', color='#4a5568')
+    axes[1].tick_params(colors='#a0aec0')
+    for spine in axes[1].spines.values():
+        spine.set_color('#4a5568')
     
     plt.tight_layout()
     return fig
@@ -524,21 +857,29 @@ if not available_models:
     st.error("❌ No models loaded successfully!")
     st.stop()
 
+# Load sample images
+sample_images = load_sample_images()
+
 # ============================================================
 # SIDEBAR
 # ============================================================
 
 st.sidebar.title("🧭 Navigation")
-page = st.sidebar.radio("Go to", 
-    ["🏠 Home", "📊 Dataset Overview", "📈 Training History", "🎯 Model Details", "🔮 Predict"])
+page = st.sidebar.radio("", 
+    ["🏠 Home", "📊 Dataset Overview", "📈 Training History", "🎯 Model Details", "🔮 Predict"],
+    label_visibility="collapsed")
 
 st.sidebar.markdown("---")
-st.sidebar.info(f"""
-**System Info**
-- TF: {tf.__version__}
-- Models: {len(available_models)}/3
-- Classes: {len(class_names)}
-""")
+st.sidebar.markdown(f"""
+<div style='background: rgba(102, 126, 234, 0.1); padding: 1.5rem; border-radius: 15px; margin-top: 1rem; border: 1px solid #4a5568;'>
+    <h4 style='margin:0; color: #667eea; font-weight: 700;'>⚡ System Info</h4>
+    <p style='margin: 1rem 0 0 0; font-size: 0.9rem; line-height: 1.8; color: #a0aec0;'>
+        <b style='color: #e2e8f0;'>TensorFlow:</b> {tf.__version__}<br>
+        <b style='color: #e2e8f0;'>Models:</b> {len(available_models)}/3<br>
+        <b style='color: #e2e8f0;'>Classes:</b> {len(class_names)}<br>
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # ============================================================
 # PAGES
@@ -547,7 +888,7 @@ st.sidebar.info(f"""
 if page == "🏠 Home":
     st.markdown('<div class="main-header">👔 Fashion Classifier</div>',
                 unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Klasifikasi Jenis Pakaian Menggunakan Deep Learning</div>',
+    st.markdown('<div class="sub-header">AI-Powered Fashion Item Classification System</div>',
                 unsafe_allow_html=True)
     
     st.markdown("---")
@@ -555,23 +896,51 @@ if page == "🏠 Home":
     # Metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("📦 Classes", len(class_names))
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{len(class_names)}</div>
+            <div class="metric-label">Fashion Categories</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
     with col2:
-        st.metric("🤖 Models", f"{len(available_models)}/3")
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{len(available_models)}/3</div>
+            <div class="metric-label">AI Models Ready</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
     with col3:
         if comparison_df is not None:
             best = comparison_df['Test Accuracy'].str.extract(r'(\d+\.\d+)')[0].astype(float).max()
-            st.metric("🏆 Best Accuracy", f"{best:.1f}%")
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{best:.1f}%</div>
+                <div class="metric-label">Best Accuracy</div>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            st.metric("🏆 Best Accuracy", "N/A")
+            st.markdown("""
+            <div class="metric-card">
+                <div class="metric-value">N/A</div>
+                <div class="metric-label">Best Accuracy</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
     with col4:
         total_images = metadata.get('total_train', 0) + metadata.get('total_test', 0) + metadata.get('total_val', 0)
-        st.metric("📸 Total Images", f"{total_images:,}")
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{total_images:,}</div>
+            <div class="metric-label">Training Images</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Classes
-    st.subheader("📦 Fashion Categories")
+    # Classes with icons
+    st.markdown('<div class="section-header">👗 Fashion Categories</div>', unsafe_allow_html=True)
     
     cols = st.columns(5)
     icons = {'dress':'👗', 'pants':'👖', 'shirt':'👕', 'shoes':'👞', 'shorts':'🩳'}
@@ -579,9 +948,9 @@ if page == "🏠 Home":
     for i, cls in enumerate(class_names):
         with cols[i]:
             st.markdown(f"""
-            <div style='text-align:center; padding:1.5rem; background:#f0f2f6; border-radius:0.5rem; border-left: 4px solid #1f77b4;'>
-                <div style='font-size:3rem;'>{icons.get(cls, '👔')}</div>
-                <b style='font-size:1.1rem;'>{cls.upper()}</b>
+            <div class='class-card'>
+                <div class='class-icon'>{icons.get(cls, '👔')}</div>
+                <div class='class-name'>{cls}</div>
             </div>
             """, unsafe_allow_html=True)
     
@@ -589,7 +958,7 @@ if page == "🏠 Home":
     
     # Model Comparison
     if comparison_df is not None:
-        st.subheader("🏆 Model Performance Comparison")
+        st.markdown('<div class="section-header">🏆 Model Performance</div>', unsafe_allow_html=True)
         st.dataframe(comparison_df, use_container_width=True, height=150)
     
     st.markdown("---")
@@ -598,36 +967,43 @@ if page == "🏠 Home":
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### 🎯 Features")
         st.markdown("""
-        - **3 Deep Learning Models**
-          - CNN Base (Custom)
-          - MobileNetV2 (Transfer Learning)
-          - EfficientNetB0 (Transfer Learning)
-        
-        - **High Accuracy Classification**
-        - **Real-time Prediction**
-        - **Detailed Analytics**
-        """)
+        <div class="info-box">
+            <h3 style='margin:0 0 1rem 0; color: #667eea;'>🎯 Key Features</h3>
+            <p style='margin:0; line-height: 1.8; color: #e2e8f0;'>
+                ✨ <b>3 Advanced AI Models</b><br>
+                • Custom CNN Architecture<br>
+                • MobileNetV2 (Transfer Learning)<br>
+                • EfficientNetB0 (Transfer Learning)<br><br>
+                🚀 <b>Capabilities</b><br>
+                • High Accuracy Classification<br>
+                • Real-time Predictions<br>
+                • Detailed Performance Analytics
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown("### 📊 Dataset Info")
-        if metadata:
-            st.markdown(f"""
-            - **Total Images**: {total_images:,}
-            - **Training Set**: {metadata.get('total_train', 'N/A'):,}
-            - **Test Set**: {metadata.get('total_test', 'N/A'):,}
-            - **Validation Set**: {metadata.get('total_val', 'N/A'):,}
-            - **Image Size**: {metadata.get('img_size', 224)}x{metadata.get('img_size', 224)}
-            """)
+        st.markdown(f"""
+        <div class="info-box">
+            <h3 style='margin:0 0 1rem 0; color: #667eea;'>📊 Dataset Statistics</h3>
+            <p style='margin:0; line-height: 1.8; color: #e2e8f0;'>
+                📦 <b>Total Images:</b> {total_images:,}<br>
+                🎓 <b>Training Set:</b> {metadata.get('total_train', 'N/A'):,} (70%)<br>
+                🧪 <b>Test Set:</b> {metadata.get('total_test', 'N/A'):,} (20%)<br>
+                ✅ <b>Validation Set:</b> {metadata.get('total_val', 'N/A'):,} (10%)<br>
+                📐 <b>Image Size:</b> {metadata.get('img_size', 224)}×{metadata.get('img_size', 224)} pixels
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 elif page == "📊 Dataset Overview":
-    st.title("📊 Dataset Overview")
+    st.markdown('<div class="main-header">📊 Dataset Overview</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
     # Dataset Statistics
-    st.subheader("📈 Dataset Statistics")
+    st.markdown('<div class="section-header">📈 Dataset Distribution</div>', unsafe_allow_html=True)
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -667,8 +1043,32 @@ elif page == "📊 Dataset Overview":
     
     st.markdown("---")
     
+    # Sample Images Section
+    if sample_images:
+        st.markdown('<div class="section-header">📸 Sample Dataset Images</div>', unsafe_allow_html=True)
+        
+        for class_name in class_names:
+            if class_name in sample_images:
+                st.markdown(f"""
+                <div class="info-box" style='margin: 1.5rem 0;'>
+                    <h4 style='margin:0; color: #667eea; text-transform: uppercase; letter-spacing: 2px;'>
+                        {icons.get(class_name, '👔')} {class_name}
+                    </h4>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                cols = st.columns(len(sample_images[class_name]))
+                for idx, img in enumerate(sample_images[class_name]):
+                    with cols[idx]:
+                        st.image(img, use_container_width=True)
+        
+        st.markdown("---")
+    else:
+        st.info("💡 Sample images will be displayed here if available in 'sample_images' folder")
+        st.markdown("---")
+    
     # Split Ratio Visualization
-    st.subheader("📊 Data Split Distribution")
+    st.markdown('<div class="section-header">📊 Data Split Analysis</div>', unsafe_allow_html=True)
     
     split_data = {
         'Split': ['Training', 'Test', 'Validation'],
@@ -684,19 +1084,24 @@ elif page == "📊 Dataset Overview":
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        fig, ax = plt.subplots(figsize=(10, 5))
+        fig, ax = plt.subplots(figsize=(10, 5), facecolor='#1a1f2e')
+        ax.set_facecolor('#2d3748')
         bars = ax.bar(split_df['Split'], split_df['Images'], 
-                      color=['#3498db', '#2ecc71', '#f39c12'],
-                      edgecolor='black', linewidth=1.5)
-        ax.set_ylabel('Number of Images', fontsize=12, fontweight='bold')
-        ax.set_title('Dataset Split Distribution', fontsize=14, fontweight='bold')
-        ax.grid(axis='y', alpha=0.3)
+                      color=['#667eea', '#764ba2', '#f39c12'],
+                      edgecolor='none', width=0.6)
+        ax.set_ylabel('Number of Images', fontsize=12, fontweight='600', color='#e2e8f0')
+        ax.set_title('Dataset Split Distribution', fontsize=14, fontweight='700', 
+                    color='#667eea', pad=20)
+        ax.grid(axis='y', alpha=0.2, linestyle='--', color='#4a5568')
+        ax.tick_params(colors='#a0aec0')
+        for spine in ax.spines.values():
+            spine.set_color('#4a5568')
         
         for bar, count in zip(bars, split_df['Images']):
             height = bar.get_height()
             ax.text(bar.get_x() + bar.get_width()/2., height,
                    f'{count:,}\n({count/total*100:.1f}%)',
-                   ha='center', va='bottom', fontweight='bold')
+                   ha='center', va='bottom', fontweight='600', fontsize=10, color='#e2e8f0')
         
         plt.tight_layout()
         st.pyplot(fig)
@@ -707,34 +1112,38 @@ elif page == "📊 Dataset Overview":
     st.markdown("---")
     
     # Dataset Configuration
-    st.subheader("⚙️ Dataset Configuration")
+    st.markdown('<div class="section-header">⚙️ Configuration Details</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("""
-        **Image Properties:**
-        - Image Size: {}x{}
-        - Channels: RGB (3)
-        - Format: JPEG/PNG
-        - Batch Size: {}
-        """.format(
-            metadata.get('img_size', 224),
-            metadata.get('img_size', 224),
-            metadata.get('batch_size', 32)
-        ))
+        st.markdown(f"""
+        <div class="info-box">
+            <h4 style='margin:0 0 1rem 0; color: #667eea;'>🖼️ Image Properties</h4>
+            <p style='margin:0; line-height: 1.8; color: #e2e8f0;'>
+                • <b>Dimensions:</b> {metadata.get('img_size', 224)}×{metadata.get('img_size', 224)} pixels<br>
+                • <b>Color Channels:</b> RGB (3 channels)<br>
+                • <b>Format:</b> JPEG/PNG<br>
+                • <b>Batch Size:</b> {metadata.get('batch_size', 32)}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
-        **Preprocessing:**
-        - Rescaling: 0-1 (CNN Base)
-        - MobileNet preprocessing
-        - EfficientNet preprocessing
-        - No augmentation (original)
-        """)
+        <div class="info-box">
+            <h4 style='margin:0 0 1rem 0; color: #667eea;'>🔧 Preprocessing Pipeline</h4>
+            <p style='margin:0; line-height: 1.8; color: #e2e8f0;'>
+                • <b>CNN Base:</b> Rescaling (0-1 normalization)<br>
+                • <b>MobileNet:</b> Specialized preprocessing<br>
+                • <b>EfficientNet:</b> Advanced preprocessing<br>
+                • <b>Augmentation:</b> Original images only
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 elif page == "📈 Training History":
-    st.title("📈 Training History")
+    st.markdown('<div class="main-header">📈 Training History</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -745,7 +1154,7 @@ elif page == "📈 Training History":
         'EfficientNetB0': 'efficientnet'
     }
     
-    selected_display = st.selectbox("Select Model", list(model_options.keys()))
+    selected_display = st.selectbox("Select Model to Analyze", list(model_options.keys()))
     selected_key = model_options[selected_display]
     
     st.markdown("---")
@@ -755,30 +1164,50 @@ elif page == "📈 Training History":
         history = histories[selected_key]
         
         # Training summary
-        st.subheader(f"📊 {selected_display} - Training Summary")
+        st.markdown(f'<div class="section-header">📊 {selected_display} Performance</div>', unsafe_allow_html=True)
         
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
             final_acc = history['accuracy'][-1] if 'accuracy' in history else 0
-            st.metric("Final Train Acc", f"{final_acc*100:.2f}%")
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{final_acc*100:.2f}%</div>
+                <div class="metric-label">Final Train Accuracy</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col2:
             final_val_acc = history['val_accuracy'][-1] if 'val_accuracy' in history else 0
-            st.metric("Final Val Acc", f"{final_val_acc*100:.2f}%")
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{final_val_acc*100:.2f}%</div>
+                <div class="metric-label">Final Val Accuracy</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col3:
             best_val_acc = max(history['val_accuracy']) if 'val_accuracy' in history else 0
-            st.metric("Best Val Acc", f"{best_val_acc*100:.2f}%")
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{best_val_acc*100:.2f}%</div>
+                <div class="metric-label">Best Val Accuracy</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col4:
             num_epochs = len(history['accuracy']) if 'accuracy' in history else 0
-            st.metric("Epochs Trained", num_epochs)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{num_epochs}</div>
+                <div class="metric-label">Epochs Trained</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         st.markdown("---")
         
         # Plot training curves
-        st.subheader("📈 Training Curves")
+        st.markdown('<div class="section-header">📈 Learning Curves</div>', unsafe_allow_html=True)
         fig = plot_training_history(history, selected_display)
         if fig:
             st.pyplot(fig)
@@ -786,7 +1215,7 @@ elif page == "📈 Training History":
         st.markdown("---")
         
         # Detailed metrics table
-        st.subheader("📋 Epoch-by-Epoch Metrics")
+        st.markdown('<div class="section-header">📋 Detailed Metrics</div>', unsafe_allow_html=True)
         
         epochs_data = {
             'Epoch': list(range(1, len(history['accuracy']) + 1)),
@@ -801,18 +1230,25 @@ elif page == "📈 Training History":
         
         # Best epoch info
         best_epoch = np.argmax(history['val_accuracy']) + 1
-        st.info(f"🏆 **Best Validation Accuracy** achieved at **Epoch {best_epoch}** with **{max(history['val_accuracy'])*100:.2f}%**")
+        st.markdown(f"""
+        <div class="info-box">
+            <h4 style='margin:0; color: #667eea;'>🏆 Peak Performance</h4>
+            <p style='margin:0.5rem 0 0 0; font-size: 1.1rem; color: #e2e8f0;'>
+                Best validation accuracy of <b style='color: #667eea;'>{max(history['val_accuracy'])*100:.2f}%</b> achieved at <b style='color: #667eea;'>Epoch {best_epoch}</b>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
     
     else:
         st.warning(f"⚠️ Training history not available for {selected_display}")
         st.info("Training history files (.pkl) might be missing from the model directory.")
 
 elif page == "🎯 Model Details":
-    st.title("🎯 Model Details")
+    st.markdown('<div class="main-header">🎯 Model Architecture</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
-    model_option = st.selectbox("Select Model", available_models)
+    model_option = st.selectbox("Select Model to Explore", available_models)
     
     st.markdown("---")
     
@@ -827,7 +1263,7 @@ elif page == "🎯 Model Details":
     if 'model_info' in metadata and model_key in metadata['model_info']:
         model_info = metadata['model_info'][model_key]
         
-        st.subheader(f"📦 {model_option} Architecture")
+        st.markdown(f'<div class="section-header">📦 {model_option} Overview</div>', unsafe_allow_html=True)
         
         # Key metrics
         col1, col2, col3, col4 = st.columns(4)
@@ -836,7 +1272,7 @@ elif page == "🎯 Model Details":
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-value">{model_info.get('type', 'N/A').replace('_', ' ').title()}</div>
-                <div class="metric-label">Model Type</div>
+                <div class="metric-label">Architecture Type</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -870,34 +1306,42 @@ elif page == "🎯 Model Details":
         st.markdown("---")
         
         # Model specifications
-        st.subheader("🔧 Model Specifications")
+        st.markdown('<div class="section-header">🔧 Technical Specifications</div>', unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("**Architecture Details:**")
             st.markdown(f"""
-            - **Name**: {model_info.get('name', 'N/A')}
-            - **Type**: {model_info.get('type', 'N/A').replace('_', ' ').title()}
-            - **Base Model**: {model_info.get('base_model', 'Custom CNN')}
-            - **Pretrained Weights**: {model_info.get('pretrained_weights', 'None')}
-            - **Total Parameters**: {model_info.get('total_params', 0):,}
-            """)
+            <div class="info-box">
+                <h4 style='margin:0 0 1rem 0; color: #667eea;'>🏗️ Architecture Details</h4>
+                <p style='margin:0; line-height: 1.8; color: #e2e8f0;'>
+                    • <b>Model Name:</b> {model_info.get('name', 'N/A')}<br>
+                    • <b>Type:</b> {model_info.get('type', 'N/A').replace('_', ' ').title()}<br>
+                    • <b>Base Model:</b> {model_info.get('base_model', 'Custom CNN')}<br>
+                    • <b>Pretrained:</b> {model_info.get('pretrained_weights', 'None')}<br>
+                    • <b>Parameters:</b> {model_info.get('total_params', 0):,}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col2:
-            st.markdown("**Training Configuration:**")
             st.markdown(f"""
-            - **Input Shape**: {model_info.get('input_shape', [224, 224, 3])}
-            - **Preprocessing**: {model_info.get('preprocessing', 'N/A')}
-            - **Test Accuracy**: {model_info.get('test_accuracy', 0)*100:.2f}%
-            - **Test Loss**: {model_info.get('test_loss', 0):.4f}
-            """)
+            <div class="info-box">
+                <h4 style='margin:0 0 1rem 0; color: #667eea;'>⚙️ Training Configuration</h4>
+                <p style='margin:0; line-height: 1.8; color: #e2e8f0;'>
+                    • <b>Input Shape:</b> {model_info.get('input_shape', [224, 224, 3])}<br>
+                    • <b>Preprocessing:</b> {model_info.get('preprocessing', 'N/A')}<br>
+                    • <b>Test Accuracy:</b> {model_info.get('test_accuracy', 0)*100:.2f}%<br>
+                    • <b>Test Loss:</b> {model_info.get('test_loss', 0):.4f}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
         
         st.markdown("---")
         
         # Model summary
         if models[model_option] is not None:
-            st.subheader("📋 Model Architecture Summary")
+            st.markdown('<div class="section-header">📋 Layer Architecture</div>', unsafe_allow_html=True)
             
             # Create summary string
             stringlist = []
@@ -909,7 +1353,7 @@ elif page == "🎯 Model Details":
         st.markdown("---")
         
         # Training history for this model
-        st.subheader("📈 Training Performance")
+        st.markdown('<div class="section-header">📈 Training Performance</div>', unsafe_allow_html=True)
         
         if histories.get(model_key) is not None:
             history = histories[model_key]
@@ -923,13 +1367,13 @@ elif page == "🎯 Model Details":
         st.warning(f"⚠️ Detailed information not available for {model_option}")
 
 elif page == "🔮 Predict":
-    st.title("🔮 Fashion Prediction")
+    st.markdown('<div class="main-header">🔮 Fashion Prediction</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
     # Model selection
-    st.subheader("⚙️ Select Model")
-    selected = st.selectbox("Choose a model for prediction", available_models, index=0)
+    st.markdown('<div class="section-header">⚙️ Model Selection</div>', unsafe_allow_html=True)
+    selected = st.selectbox("Choose your AI model", available_models, index=0)
     
     if models[selected] is None:
         st.error(f"❌ {selected} not available!")
@@ -947,12 +1391,18 @@ elif page == "🔮 Predict":
         model_info = metadata['model_info'][model_key]
         acc = model_info.get('test_accuracy', 0)
         
-        st.info(f"📊 **{selected}** - Test Accuracy: **{acc*100:.2f}%**")
+        st.markdown(f"""
+        <div class="info-box">
+            <p style='margin:0; font-size: 1.1rem; color: #e2e8f0;'>
+                🤖 <b style='color: #667eea;'>{selected}</b> | Test Accuracy: <b style='color: #667eea;'>{acc*100:.2f}%</b>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
     # Input method
-    st.subheader("📥 Input Method")
+    st.markdown('<div class="section-header">📥 Upload Your Image</div>', unsafe_allow_html=True)
     method = st.radio("Choose input method", ["📁 Upload Image", "📷 Camera"], horizontal=True)
     
     st.markdown("---")
@@ -972,13 +1422,13 @@ elif page == "🔮 Predict":
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("📸 Input Image")
+            st.markdown('<div class="section-header">📸 Input Image</div>', unsafe_allow_html=True)
             st.image(image, use_container_width=True, caption="Original Image")
         
         with col2:
-            st.subheader("🔄 Processing")
+            st.markdown('<div class="section-header">🔄 AI Analysis</div>', unsafe_allow_html=True)
             
-            with st.spinner("Analyzing image..."):
+            with st.spinner("🔍 Analyzing image with AI..."):
                 pred_class, confidence, all_probs = predict_image(
                     image, models[selected], selected, class_names
                 )
@@ -990,27 +1440,27 @@ elif page == "🔮 Predict":
                 
                 st.markdown(f"""
                 <div class="prediction-box">
-                    <h3 style='margin:0; color:white;'>Prediction Result</h3>
-                    <div style='font-size:4rem; margin:1rem 0;'>{icon}</div>
-                    <h1 style='margin:0; color:white;'>{pred_class.upper()}</h1>
-                    <h2 style='margin:0.5rem 0; color:white;'>{confidence*100:.2f}%</h2>
+                    <h3 style='margin:0; font-weight: 400;'>Prediction Result</h3>
+                    <div style='font-size:5rem; margin:1rem 0;'>{icon}</div>
+                    <h1 style='margin:0; font-weight: 800; font-size: 2.5rem;'>{pred_class.upper()}</h1>
+                    <h2 style='margin:0.5rem 0; font-weight: 700;'>{confidence*100:.2f}%</h2>
                 </div>
                 """, unsafe_allow_html=True)
                 
                 # Confidence level
                 if confidence >= 0.9:
-                    st.success("🎯 **Very High Confidence** - Model is very certain about this prediction!")
+                    st.success("🎯 **Very High Confidence** - The model is extremely certain!")
                 elif confidence >= 0.7:
-                    st.info("✅ **High Confidence** - Model is confident about this prediction.")
+                    st.info("✅ **High Confidence** - Strong prediction detected")
                 elif confidence >= 0.5:
-                    st.warning("⚠️ **Moderate Confidence** - Model has some uncertainty.")
+                    st.warning("⚠️ **Moderate Confidence** - Some uncertainty present")
                 else:
-                    st.error("❌ **Low Confidence** - Model is uncertain about this prediction.")
+                    st.error("❌ **Low Confidence** - Consider using a clearer image")
         
         # Detailed probabilities
         if all_probs:
             st.markdown("---")
-            st.subheader("📊 Detailed Prediction Probabilities")
+            st.markdown('<div class="section-header">📊 Detailed Analysis</div>', unsafe_allow_html=True)
             
             # Bar chart
             fig = plot_confidence_bars(all_probs)
@@ -1022,7 +1472,7 @@ elif page == "🔮 Predict":
             col1, col2 = st.columns([2, 1])
             
             with col1:
-                st.subheader("📋 Probability Table")
+                st.markdown('<div class="section-header">📋 All Predictions</div>', unsafe_allow_html=True)
                 prob_df = pd.DataFrame({
                     'Class': list(all_probs.keys()),
                     'Probability': [f"{v*100:.2f}%" for v in all_probs.values()],
@@ -1033,43 +1483,58 @@ elif page == "🔮 Predict":
                 st.dataframe(prob_df.reset_index(drop=True), use_container_width=True)
             
             with col2:
-                st.subheader("🎯 Top 3 Predictions")
+                st.markdown('<div class="section-header">🎯 Top 3</div>', unsafe_allow_html=True)
                 sorted_probs = sorted(all_probs.items(), key=lambda x: x[1], reverse=True)[:3]
                 
                 for i, (cls, prob) in enumerate(sorted_probs):
                     medal = ['🥇', '🥈', '🥉'][i]
                     st.markdown(f"""
-                    <div style='padding:0.5rem; margin:0.5rem 0; background:#f0f2f6; border-radius:0.5rem;'>
-                        {medal} <b>{cls.upper()}</b>: {prob*100:.2f}%
+                    <div class="metric-card" style='margin: 0.5rem 0;'>
+                        <div style='font-size: 1.5rem;'>{medal}</div>
+                        <div style='font-weight: 700; color: #e2e8f0; margin: 0.3rem 0; text-transform: uppercase;'>{cls}</div>
+                        <div style='color: #667eea; font-weight: 700; font-size: 1.2rem;'>{prob*100:.2f}%</div>
                     </div>
                     """, unsafe_allow_html=True)
     
     else:
-        st.info("👆 Please upload an image or take a photo to start prediction")
+        st.markdown("""
+        <div class="info-box" style='text-align: center;'>
+            <h3 style='margin:0; color: #667eea;'>👆 Ready to Classify!</h3>
+            <p style='margin:0.5rem 0 0 0; color: #e2e8f0;'>Upload an image or take a photo to start the AI-powered fashion classification</p>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
-        st.subheader("💡 Tips for Best Results")
+        st.markdown('<div class="section-header">💡 Tips for Best Results</div>', unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         
         with col1:
             st.markdown("""
-            **Image Quality:**
-            - Use clear, well-lit images
-            - Avoid blurry photos
-            - Center the item in frame
-            - Use plain backgrounds
-            """)
+            <div class="info-box">
+                <h4 style='margin:0 0 1rem 0; color: #667eea;'>📸 Image Quality</h4>
+                <p style='margin:0; line-height: 1.8; color: #e2e8f0;'>
+                    • Use clear, well-lit images<br>
+                    • Avoid blurry or dark photos<br>
+                    • Center the item in frame<br>
+                    • Use plain backgrounds
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col2:
             st.markdown("""
-            **Supported Items:**
-            - 👗 Dresses
-            - 👖 Pants
-            - 👕 Shirts
-            - 👞 Shoes
-            - 🩳 Shorts
-            """)
+            <div class="info-box">
+                <h4 style='margin:0 0 1rem 0; color: #667eea;'>👔 Supported Items</h4>
+                <p style='margin:0; line-height: 1.8; color: #e2e8f0;'>
+                    👗 Dresses<br>
+                    👖 Pants<br>
+                    👕 Shirts<br>
+                    👞 Shoes<br>
+                    🩳 Shorts
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
 # ============================================================
 # FOOTER
@@ -1077,11 +1542,11 @@ elif page == "🔮 Predict":
 
 st.markdown("---")
 st.markdown("""
-<div style='text-align:center; color:#666; padding:2rem; background:#f0f2f6; border-radius:0.5rem; margin-top:2rem;'>
-    <h3 style='margin:0; color:#1f77b4;'>👔 Fashion Apparel Classifier</h3>
-    <p style='margin:0.5rem 0;'><b>UAP Machine Learning 2024</b></p>
-    <p style='margin:0; font-size:0.9rem;'>
-        Deep Learning Image Classification | CNN Base · MobileNetV2 · EfficientNetB0
+<div style='text-align:center; padding:2.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:20px; margin-top:3rem; box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4); border: 1px solid rgba(255,255,255,0.1);'>
+    <h2 style='margin:0; color:white; font-weight: 800; letter-spacing: -1px;'>👔 Fashion Apparel Classifier</h2>
+    <p style='margin:1rem 0 0.5rem 0; color: white; font-size: 1.1rem; font-weight: 600;'>UAP Machine Learning 2024</p>
+    <p style='margin:0; font-size:0.95rem; color: rgba(255,255,255,0.9); font-weight: 400;'>
+        Powered by Deep Learning | CNN Base · MobileNetV2 · EfficientNetB0
     </p>
 </div>
 """, unsafe_allow_html=True)
