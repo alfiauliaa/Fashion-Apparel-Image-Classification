@@ -1,0 +1,74 @@
+{
+  "layer_info": {
+    "batch_normalization_8": {
+      "num_weights": 4,
+      "shapes": [
+        [
+          1280
+        ],
+        [
+          1280
+        ],
+        [
+          1280
+        ],
+        [
+          1280
+        ]
+      ]
+    },
+    "dense_6": {
+      "num_weights": 2,
+      "shapes": [
+        [
+          1280,
+          256
+        ],
+        [
+          256
+        ]
+      ]
+    },
+    "batch_normalization_9": {
+      "num_weights": 4,
+      "shapes": [
+        [
+          256
+        ],
+        [
+          256
+        ],
+        [
+          256
+        ],
+        [
+          256
+        ]
+      ]
+    },
+    "dense_7": {
+      "num_weights": 2,
+      "shapes": [
+        [
+          256,
+          128
+        ],
+        [
+          128
+        ]
+      ]
+    },
+    "dense_8": {
+      "num_weights": 2,
+      "shapes": [
+        [
+          128,
+          5
+        ],
+        [
+          5
+        ]
+      ]
+    }
+  }
+}

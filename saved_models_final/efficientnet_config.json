@@ -1,0 +1,6 @@
+{
+  "model_name": "efficientnet",
+  "img_size": 224,
+  "num_classes": 5,
+  "architecture": "transfer_learning"
+}

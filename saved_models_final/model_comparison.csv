@@ -1,0 +1,4 @@
+Model,Test Accuracy,Test Loss,Parameters,Training Epochs
+CNN Base,0.9331 (93.31%),1.0906,"19,400,901",30
+MobileNetV2,0.9758 (97.58%),0.5039,"2,625,605",30
+EfficientNetB0,0.9816 (98.16%),0.4849,"4,417,192",30

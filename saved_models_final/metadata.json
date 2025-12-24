@@ -1,0 +1,68 @@
+{
+    "img_size": 224,
+    "batch_size": 32,
+    "num_classes": 5,
+    "classes": [
+        "dress",
+        "pants",
+        "shirt",
+        "shoes",
+        "shorts"
+    ],
+    "seed": 42,
+    "total_train": 4193,
+    "total_test": 1196,
+    "total_val": 604,
+    "split_ratio": {
+        "train": 0.7,
+        "test": 0.2,
+        "val": 0.1
+    },
+    "tensorflow_version": "2.19.0",
+    "keras_version": "3.10.0",
+    "model_info": {
+        "cnn_base": {
+            "name": "CNN Base (Custom)",
+            "type": "non_pretrained",
+            "total_params": 19400901,
+            "test_accuracy": 0.9331103563308716,
+            "test_loss": 1.0905722379684448,
+            "preprocessing": "rescale_only",
+            "input_shape": [
+                224,
+                224,
+                3
+            ]
+        },
+        "mobilenet": {
+            "name": "MobileNetV2",
+            "type": "transfer_learning",
+            "base_model": "MobileNetV2",
+            "pretrained_weights": "imagenet",
+            "total_params": 2625605,
+            "test_accuracy": 0.9757525324821472,
+            "test_loss": 0.5039191842079163,
+            "preprocessing": "mobilenet_v2",
+            "input_shape": [
+                224,
+                224,
+                3
+            ]
+        },
+        "efficientnet": {
+            "name": "EfficientNetB0",
+            "type": "transfer_learning",
+            "base_model": "EfficientNetB0",
+            "pretrained_weights": "imagenet",
+            "total_params": 4417192,
+            "test_accuracy": 0.9816053509712219,
+            "test_loss": 0.48492953181266785,
+            "preprocessing": "efficientnet",
+            "input_shape": [
+                224,
+                224,
+                3
+            ]
+        }
+    }
+}
