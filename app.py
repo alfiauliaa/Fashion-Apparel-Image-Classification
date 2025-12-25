@@ -42,6 +42,34 @@ tf.config.set_visible_devices([], 'GPU')
 # Dark Mode Custom CSS
 st.markdown("""
 <style>
+/* Main Background */
+    .stApp {
+        background: #0f1419;
+    }
+    
+    .main {
+        background: #0f1419;
+        padding-top: 0 !important;
+    }
+    
+    .block-container {
+        background: #1a1f2e;
+        border-radius: 20px;
+        padding: 2rem;
+        padding-top: 1rem !important;
+        margin-top: 0 !important;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        border: 1px solid #2d3748;
+    }
+    
+    /* Remove default Streamlit padding */
+    .main .block-container {
+        padding-top: 1rem !important;
+    }
+    
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+    }
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
     
