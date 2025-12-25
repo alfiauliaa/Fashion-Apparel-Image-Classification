@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import json
 import pickle
-from PIL import Image
+from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
 from pathlib import Path
 import os
@@ -28,6 +28,13 @@ st.set_page_config(
 )
 
 icons = {'dress':'👗', 'pants':'👖', 'shirt':'👕', 'shoes':'👞', 'shorts':'🩳'}
+
+# ============================================================
+# CONFIGURASI UKURAN GAMBAR SAMPLE
+# ============================================================
+SAMPLE_IMAGE_SIZE = (250, 250)  # Ukuran konsisten untuk semua gambar sample
+SAMPLE_IMAGES_PER_CLASS = 3     # Jumlah gambar per kelas
+
 # Disable GPU
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 tf.config.set_visible_devices([], 'GPU')
@@ -203,6 +210,48 @@ st.markdown("""
         letter-spacing: 1px;
     }
     
+    /* Sample Image Grid */
+    .sample-image-grid {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin: 20px 0;
+        flex-wrap: wrap;
+    }
+    
+    .sample-image-item {
+        text-align: center;
+        margin: 10px;
+        transition: transform 0.3s ease;
+    }
+    
+    .sample-image-item:hover {
+        transform: translateY(-5px);
+    }
+    
+    .sample-image-frame {
+        border: 3px solid #4a5568;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 10px;
+        background: #2d3748;
+        padding: 5px;
+        transition: border-color 0.3s ease;
+    }
+    
+    .sample-image-frame:hover {
+        border-color: #667eea;
+    }
+    
+    .sample-image-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 5px;
+    }
+    
     /* Sidebar Dark */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #1a1f2e 0%, #0f1419 100%);
@@ -248,32 +297,6 @@ st.markdown("""
         border: none;
         height: 1px;
         background: linear-gradient(90deg, transparent, #4a5568, transparent);
-    }
-    
-    /* Sample Image Container */
-    .sample-image-container {
-        background: #2d3748;
-        padding: 1rem;
-        border-radius: 15px;
-        border: 2px solid #4a5568;
-        transition: all 0.3s ease;
-        margin: 0.5rem;
-    }
-    
-    .sample-image-container:hover {
-        border-color: #667eea;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        transform: translateY(-5px);
-    }
-    
-    .sample-image-label {
-        text-align: center;
-        color: #e2e8f0;
-        font-weight: 600;
-        margin-top: 0.5rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-size: 0.9rem;
     }
     
     /* Animations */
@@ -348,36 +371,76 @@ st.markdown("""
 # HELPER FUNCTIONS
 # ============================================================
 
-def load_sample_images(sample_dir='sample_images', num_per_class=3):
-    """Load sample images from the sample_images folder"""
+def resize_image_with_padding(image, target_size):
+    """
+    Resize image dengan padding untuk menjaga aspect ratio
+    dan menghasilkan ukuran yang konsisten
+    """
+    width, height = image.size
+    target_width, target_height = target_size
+    
+    # Hitung rasio untuk resize
+    width_ratio = target_width / width
+    height_ratio = target_height / height
+    ratio = min(width_ratio, height_ratio)
+    
+    # Resize dengan menjaga aspect ratio
+    new_width = int(width * ratio)
+    new_height = int(height * ratio)
+    resized_image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    
+    # Tambahkan padding jika diperlukan
+    if new_width < target_width or new_height < target_height:
+        padded_image = Image.new('RGB', (target_width, target_height), (255, 255, 255))
+        paste_x = (target_width - new_width) // 2
+        paste_y = (target_height - new_height) // 2
+        padded_image.paste(resized_image, (paste_x, paste_y))
+        return padded_image
+    
+    return resized_image
+
+def load_sample_images(sample_dir='sample_images', num_per_class=SAMPLE_IMAGES_PER_CLASS):
+    """Load sample images dari folder sample_images"""
     sample_images = {}
     
     if not os.path.exists(sample_dir):
+        st.warning(f"📁 Folder '{sample_dir}' tidak ditemukan. Sample images tidak akan ditampilkan.")
         return None
     
-    # Get all subdirectories (each is a class)
+    # Cari semua subdirektori (setiap kelas)
     for class_name in os.listdir(sample_dir):
         class_path = os.path.join(sample_dir, class_name)
         if os.path.isdir(class_path):
             images = []
             image_files = [f for f in os.listdir(class_path) 
-                          if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+                          if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp'))]
             
-            # Randomly select images
-            selected = random.sample(image_files, min(num_per_class, len(image_files)))
+            if not image_files:
+                continue
+            
+            # Pilih gambar secara random
+            num_to_select = min(num_per_class, len(image_files))
+            selected = random.sample(image_files, num_to_select)
             
             for img_file in selected:
                 img_path = os.path.join(class_path, img_file)
                 try:
                     img = Image.open(img_path)
-                    images.append(img)
-                except:
+                    # Resize gambar ke ukuran yang konsisten
+                    img_resized = resize_image_with_padding(img, SAMPLE_IMAGE_SIZE)
+                    images.append(img_resized)
+                except Exception as e:
+                    st.warning(f"⚠️ Tidak bisa memuat gambar {img_file}: {str(e)}")
                     continue
             
             if images:
                 sample_images[class_name] = images
     
-    return sample_images if sample_images else None
+    if not sample_images:
+        st.warning(f"📁 Tidak ada gambar yang ditemukan di folder '{sample_dir}'")
+        return None
+    
+    return sample_images
 
 # ============================================================
 # MODEL BUILDING FUNCTIONS
@@ -870,6 +933,13 @@ page = st.sidebar.radio("",
     label_visibility="collapsed")
 
 st.sidebar.markdown("---")
+
+# Settings for sample images
+st.sidebar.markdown("### ⚙️ Sample Images Settings")
+if st.sidebar.button("🔄 Reload Sample Images"):
+    sample_images = load_sample_images()
+    st.rerun()
+
 st.sidebar.markdown(f"""
 <div style='background: rgba(102, 126, 234, 0.1); padding: 1.5rem; border-radius: 15px; margin-top: 1rem; border: 1px solid #4a5568;'>
     <h4 style='margin:0; color: #667eea; font-weight: 700;'>⚡ System Info</h4>
@@ -877,6 +947,7 @@ st.sidebar.markdown(f"""
         <b style='color: #e2e8f0;'>TensorFlow:</b> {tf.__version__}<br>
         <b style='color: #e2e8f0;'>Models:</b> {len(available_models)}/3<br>
         <b style='color: #e2e8f0;'>Classes:</b> {len(class_names)}<br>
+        <b style='color: #e2e8f0;'>Sample Size:</b> {SAMPLE_IMAGE_SIZE[0]}×{SAMPLE_IMAGE_SIZE[1]} px
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -1045,22 +1116,40 @@ elif page == "📊 Dataset Overview":
     
     # Sample Images Section
     if sample_images:
-        st.markdown('<div class="section-header">📸 Sample Dataset Images</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-header">📸 Sample Dataset Images ({SAMPLE_IMAGE_SIZE[0]}×{SAMPLE_IMAGE_SIZE[1]} pixels)</div>', unsafe_allow_html=True)
         
         for class_name in class_names:
             if class_name in sample_images:
                 st.markdown(f"""
                 <div class="info-box" style='margin: 1.5rem 0;'>
                     <h4 style='margin:0; color: #667eea; text-transform: uppercase; letter-spacing: 2px;'>
-                        {icons.get(class_name, '👔')} {class_name}
+                        {icons.get(class_name, '👔')} {class_name} 
                     </h4>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                cols = st.columns(len(sample_images[class_name]))
+                # Create columns for sample images
+                num_images = len(sample_images[class_name])
+                cols = st.columns(num_images)
+                
                 for idx, img in enumerate(sample_images[class_name]):
                     with cols[idx]:
-                        st.image(img, use_container_width=True)
+                        # Display image dengan styling konsisten
+                        st.markdown("""
+                        <div style='text-align: center;'>
+                            <div style='border: 2px solid #4a5568; border-radius: 10px; overflow: hidden; 
+                                     margin-bottom: 10px; background: #2d3748; padding: 5px;'>
+                        """, unsafe_allow_html=True)
+                        
+                        st.image(img, use_container_width=True, 
+                                caption=f"Sample", 
+                                output_format="PNG")
+                        
+                        st.markdown("""
+                            </div>
+           
+                        </div>
+                        """, unsafe_allow_html=True)
         
         st.markdown("---")
     else:
@@ -1122,6 +1211,7 @@ elif page == "📊 Dataset Overview":
             <h4 style='margin:0 0 1rem 0; color: #667eea;'>🖼️ Image Properties</h4>
             <p style='margin:0; line-height: 1.8; color: #e2e8f0;'>
                 • <b>Dimensions:</b> {metadata.get('img_size', 224)}×{metadata.get('img_size', 224)} pixels<br>
+                • <b>Sample Display:</b> {SAMPLE_IMAGE_SIZE[0]}×{SAMPLE_IMAGE_SIZE[1]} pixels<br>
                 • <b>Color Channels:</b> RGB (3 channels)<br>
                 • <b>Format:</b> JPEG/PNG<br>
                 • <b>Batch Size:</b> {metadata.get('batch_size', 32)}
